@@ -7,15 +7,32 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { Lock, LogIn, UserPlus } from "lucide-react";
+import { Lock, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+
+// TODO: Replace with the 3 allowed admin credentials you wish to use
+const ALLOWED_ADMINS = [
+  {
+    email: "admin1@example.com", // Provide this value
+    password: "password1",       // Provide this value
+    username: "adminuser1"       // Provide this value if used (optional)
+  },
+  {
+    email: "admin2@example.com", // Provide this value
+    password: "password2",
+    username: "adminuser2"
+  },
+  {
+    email: "admin3@example.com", // Provide this value
+    password: "password3",
+    username: "adminuser3"
+  }
+];
 
 export default function LoginPage() {
   const [credentials, setCredentials] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [confirmPassword, setConfirmPassword] = useState("");
 
   const navigate = useNavigate();
 
@@ -74,16 +91,6 @@ export default function LoginPage() {
       newErrors.password = "";
     }
 
-    if (mode === "register") {
-      if (!confirmPassword) {
-        newErrors.password = "Please confirm your password";
-        valid = false;
-      } else if (credentials.password !== confirmPassword) {
-        newErrors.password = "Passwords do not match";
-        valid = false;
-      }
-    }
-
     setErrors(newErrors);
     return valid;
   };
@@ -93,96 +100,62 @@ export default function LoginPage() {
     if (!validateForm() || loading) return;
     setLoading(true);
 
-    if (mode === "login") {
-      // --- LOGIN FLOW ---
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: credentials.email.trim(),
-        password: credentials.password,
+    // Restrict login to specific admin emails
+    const foundAdmin = ALLOWED_ADMINS.find(
+      (admin) => admin.email === credentials.email.trim() && admin.password === credentials.password
+    );
+
+    if (!foundAdmin) {
+      toast({
+        title: "Login Failed",
+        description: "Invalid credentials or not authorized.",
+        variant: "destructive"
       });
-
-      if (error || !data.session?.user) {
-        toast({
-          title: "Login Failed",
-          description: error ? error.message : "Unable to sign in.",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
-      const userId = data.session.user.id;
-      const { data: rolesData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
-        .eq("role", "admin")
-        .maybeSingle();
-
-      if (rolesData?.role === "admin") {
-        toast({
-          title: "Login Successful",
-          description: "Redirecting to administrator dashboard.",
-        });
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 1000);
-      } else {
-        await supabase.auth.signOut();
-        toast({
-          title: "Access Denied",
-          description: "Only administrators can access this area.",
-          variant: "destructive"
-        });
-      }
       setLoading(false);
-    } else {
-      // --- REGISTER FLOW ---
-      try {
-        // First create the user with auto confirm enabled
-        const { data, error } = await supabase.auth.signUp({
-          email: credentials.email.trim(),
-          password: credentials.password,
-          options: {
-            emailRedirectTo: window.location.origin
-          }
-        });
-
-        if (error || !data.user) {
-          throw error || new Error("Unable to register user");
-        }
-
-        // If user is created successfully, create the admin role directly
-        // We'll use the service role function to insert the role since the user might not be confirmed yet
-        const userId = data.user.id;
-        
-        // Insert directly using the public API
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert([{ user_id: userId, role: "admin" }]);
-        
-        if (roleError) {
-          console.error("Role assignment failed:", roleError);
-          throw new Error("Failed to assign admin role. Please contact system administrator.");
-        }
-
-        toast({
-          title: "Registration Successful!",
-          description: "Admin account created. Please check your email for confirmation link, then sign in.",
-        });
-        
-        setLoading(false);
-        setMode("login");
-        setCredentials({ email: credentials.email.trim(), password: "" });
-        setConfirmPassword("");
-      } catch (error: any) {
-        toast({
-          title: "Sign Up Failed",
-          description: error?.message || "Unable to register user.",
-          variant: "destructive"
-        });
-        setLoading(false);
-      }
+      return;
     }
+
+    // --- LOGIN FLOW ---
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: credentials.email.trim(),
+      password: credentials.password,
+    });
+
+    if (error || !data.session?.user) {
+      toast({
+        title: "Login Failed",
+        description: error ? error.message : "Unable to sign in.",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
+
+    const userId = data.session.user.id;
+    const { data: rolesData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (rolesData?.role === "admin") {
+      toast({
+        title: "Login Successful",
+        description: "Redirecting to administrator dashboard.",
+      });
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1000);
+    } else {
+      await supabase.auth.signOut();
+      toast({
+        title: "Access Denied",
+        description: "Only administrators can access this area.",
+        variant: "destructive"
+      });
+    }
+    setLoading(false);
   };
 
   return (
@@ -190,26 +163,20 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {mode === "login" ? "Admin Login" : "Admin Registration"}
+            Admin Login
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            {mode === "login"
-              ? "Access restricted to AMURA administrators only"
-              : "Register a new admin account"}
+            Access restricted to AMURA administrators only
           </p>
         </div>
         <Card className="shadow-lg animate-fade-in">
           <CardHeader className="flex flex-col items-center">
             <div className="w-16 h-16 rounded-full bg-amura-purple-light flex items-center justify-center mb-4">
-              {mode === "login" ? (
-                <Lock className="h-8 w-8 text-amura-purple" />
-              ) : (
-                <UserPlus className="h-8 w-8 text-amura-purple" />
-              )}
+              <Lock className="h-8 w-8 text-amura-purple" />
             </div>
-            <CardTitle>{mode === "login" ? "Administrator Access" : "Create Admin Account"}</CardTitle>
+            <CardTitle>Administrator Access</CardTitle>
             <CardDescription>
-              {mode === "login" ? "Please sign in to continue" : "Fill in the details below"}
+              Please sign in to continue
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -220,7 +187,7 @@ export default function LoginPage() {
                   id="email"
                   name="email"
                   type="email"
-                  placeholder={mode === "login" ? "admin@amuratech.org" : "Enter email"}
+                  placeholder="admin@example.com"
                   value={credentials.email}
                   onChange={handleChange}
                   className={errors.email ? "border-red-500" : ""}
@@ -239,50 +206,28 @@ export default function LoginPage() {
                   value={credentials.password}
                   onChange={handleChange}
                   className={errors.password ? "border-red-500" : ""}
-                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  autoComplete="current-password"
                   disabled={loading}
                 />
-                {mode === "register" && (
-                  <Input
-                    id="confirm-password"
-                    name="confirmPassword"
-                    type="password"
-                    placeholder="Confirm password"
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    className={errors.password ? "border-red-500 mt-2" : "mt-2"}
-                    autoComplete="new-password"
-                    disabled={loading}
-                  />
-                )}
                 {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
               </div>
+              <Button className="w-full btn-primary mt-6" onClick={handleSubmit} disabled={loading}>
+                {loading ? (
+                  <span className="animate-spin mr-2">⏳</span>
+                ) : (
+                  <LogIn className="mr-2 h-4 w-4" />
+                )}
+                Sign In
+              </Button>
             </form>
           </CardContent>
           <CardFooter>
-            <Button className="w-full btn-primary" onClick={handleSubmit} disabled={loading}>
-              {loading ? (
-                <span className="animate-spin mr-2">⏳</span>
-              ) : mode === "login" ? (
-                <LogIn className="mr-2 h-4 w-4" />
-              ) : (
-                <UserPlus className="mr-2 h-4 w-4" />
-              )}
-              {mode === "login" ? "Sign In" : "Sign Up"}
-            </Button>
+            {/* Nothing here for now */}
           </CardFooter>
         </Card>
         <div className="text-center">
-          <Button type="button" variant="link" className="text-amura-purple" onClick={() => {
-            setMode(mode === "login" ? "register" : "login");
-            setErrors({ email: "", password: "" });
-          }}>
-            {mode === "login" ? "Don't have an account? Register as admin" : "Already an admin? Sign In"}
-          </Button>
           <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-            {mode === "login"
-              ? "Forgot your password? Please contact the system administrator."
-              : "Note: Only use this form for initial admin setup."}
+            Forgot your password? Please contact the system administrator.
           </p>
         </div>
       </div>
