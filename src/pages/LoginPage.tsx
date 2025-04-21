@@ -137,46 +137,57 @@ export default function LoginPage() {
       setLoading(false);
     } else {
       // --- REGISTER FLOW ---
-      const { data, error } = await supabase.auth.signUp({
-        email: credentials.email.trim(),
-        password: credentials.password,
-      });
+      try {
+        // First create the user
+        const { data, error } = await supabase.auth.signUp({
+          email: credentials.email.trim(),
+          password: credentials.password,
+        });
 
-      if (error || !data.user) {
+        if (error || !data.user) {
+          throw error || new Error("Unable to register user");
+        }
+
+        // Sign in the user to get a session
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: credentials.email.trim(),
+          password: credentials.password,
+        });
+
+        if (signInError) {
+          throw signInError;
+        }
+
+        // Once signed in, insert the admin role
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert([{ user_id: data.user.id, role: "admin" }]);
+        
+        if (roleError) {
+          console.error("Role assignment failed:", roleError);
+          throw new Error("Failed to assign admin role. Please contact system administrator.");
+        }
+
+        toast({
+          title: "Registration Successful!",
+          description: "Admin account created. You can now log in.",
+        });
+
+        // Sign out after registration to force a clean login
+        await supabase.auth.signOut();
+        
+        setLoading(false);
+        setMode("login");
+        setCredentials({ email: credentials.email.trim(), password: "" });
+        setConfirmPassword("");
+      } catch (error: any) {
         toast({
           title: "Sign Up Failed",
-          description: error ? error.message : "Unable to sign up.",
+          description: error?.message || "Unable to register user.",
           variant: "destructive"
         });
         setLoading(false);
-        return;
       }
-
-      // Assign admin role in user_roles table
-      const userId = data.user.id;
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert([{ user_id: userId, role: "admin" }]);
-      
-      if (roleError) {
-        toast({
-          title: "Role Assignment Failed",
-          description: roleError.message,
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
-      toast({
-        title: "Registration Successful!",
-        description: "Admin account created. You can now log in.",
-      });
-
-      setLoading(false);
-      setMode("login");
-      setCredentials({ email: credentials.email.trim(), password: "" });
-      setConfirmPassword("");
     }
   };
 
@@ -285,4 +296,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
