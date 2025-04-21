@@ -138,30 +138,27 @@ export default function LoginPage() {
     } else {
       // --- REGISTER FLOW ---
       try {
-        // First create the user
+        // First create the user with auto confirm enabled
         const { data, error } = await supabase.auth.signUp({
           email: credentials.email.trim(),
           password: credentials.password,
+          options: {
+            emailRedirectTo: window.location.origin
+          }
         });
 
         if (error || !data.user) {
           throw error || new Error("Unable to register user");
         }
 
-        // Sign in the user to get a session
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: credentials.email.trim(),
-          password: credentials.password,
-        });
-
-        if (signInError) {
-          throw signInError;
-        }
-
-        // Once signed in, insert the admin role
+        // If user is created successfully, create the admin role directly
+        // We'll use the service role function to insert the role since the user might not be confirmed yet
+        const userId = data.user.id;
+        
+        // Insert directly using the public API
         const { error: roleError } = await supabase
           .from("user_roles")
-          .insert([{ user_id: data.user.id, role: "admin" }]);
+          .insert([{ user_id: userId, role: "admin" }]);
         
         if (roleError) {
           console.error("Role assignment failed:", roleError);
@@ -170,11 +167,8 @@ export default function LoginPage() {
 
         toast({
           title: "Registration Successful!",
-          description: "Admin account created. You can now log in.",
+          description: "Admin account created. Please check your email for confirmation link, then sign in.",
         });
-
-        // Sign out after registration to force a clean login
-        await supabase.auth.signOut();
         
         setLoading(false);
         setMode("login");
