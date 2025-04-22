@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -114,31 +115,74 @@ export default function LoginPage() {
       return;
     }
 
-    // --- LOGIN FLOW ---
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // Check if user exists in Supabase
+    const { data: userExists, error: checkError } = await supabase.auth.signInWithPassword({
       email: credentials.email.trim(),
       password: credentials.password,
     });
 
-    if (error || !data.session?.user) {
-      toast({
-        title: "Login Failed",
-        description: error ? error.message : "Unable to sign in.",
-        variant: "destructive"
+    if (checkError) {
+      // If login failed, the user might not exist - try to create account
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: credentials.email.trim(),
+        password: credentials.password,
       });
-      setLoading(false);
-      return;
-    }
 
-    const userId = data.session.user.id;
-    const { data: rolesData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle();
+      if (signUpError) {
+        toast({
+          title: "Login Failed",
+          description: "Unable to authenticate. Please contact system administrator.",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
 
-    if (rolesData?.role === "admin") {
+      // If successfully created account, set admin role
+      if (data.user) {
+        try {
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({ user_id: data.user.id, role: 'admin' });
+
+          if (roleError) throw roleError;
+        } catch (error) {
+          console.error("Error setting admin role:", error);
+        }
+
+        toast({
+          title: "Account Created",
+          description: "Administrator account has been created and you are now logged in.",
+        });
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 1000);
+      }
+    } else if (userExists?.session?.user) {
+      // User exists and login successful
+      const userId = userExists.session.user.id;
+      
+      // Check if user already has admin role
+      const { data: rolesData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
+      
+      if (!rolesData) {
+        // Add admin role if not already present
+        try {
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({ user_id: userId, role: 'admin' });
+
+          if (roleError) throw roleError;
+        } catch (error) {
+          console.error("Error setting admin role:", error);
+        }
+      }
+      
       toast({
         title: "Login Successful",
         description: "Redirecting to administrator dashboard.",
@@ -146,14 +190,8 @@ export default function LoginPage() {
       setTimeout(() => {
         navigate("/dashboard");
       }, 1000);
-    } else {
-      await supabase.auth.signOut();
-      toast({
-        title: "Access Denied",
-        description: "Only administrators can access this area.",
-        variant: "destructive"
-      });
     }
+    
     setLoading(false);
   };
 
