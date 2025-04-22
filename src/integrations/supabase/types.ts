@@ -9,6 +9,169 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          achievement_date: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          title: string
+        }
+        Insert: {
+          achievement_date: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          title: string
+        }
+        Update: {
+          achievement_date?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      certificates: {
+        Row: {
+          certificate_url: string | null
+          event_id: string
+          id: string
+          issued_at: string
+          student_name: string
+          user_id: string | null
+          usn: string
+        }
+        Insert: {
+          certificate_url?: string | null
+          event_id: string
+          id?: string
+          issued_at?: string
+          student_name: string
+          user_id?: string | null
+          usn: string
+        }
+        Update: {
+          certificate_url?: string | null
+          event_id?: string
+          id?: string
+          issued_at?: string
+          student_name?: string
+          user_id?: string | null
+          usn?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificates_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          creator_id: string | null
+          date: string
+          description: string | null
+          id: string
+          image_url: string | null
+          location: string | null
+          max_participants: number | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id?: string | null
+          date: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          max_participants?: number | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          max_participants?: number | null
+          title?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      registrations: {
+        Row: {
+          created_at: string
+          department: string
+          email: string
+          event_id: string
+          id: string
+          name: string
+          user_id: string
+          usn: string
+          year: string
+        }
+        Insert: {
+          created_at?: string
+          department: string
+          email: string
+          event_id: string
+          id?: string
+          name: string
+          user_id: string
+          usn: string
+          year: string
+        }
+        Update: {
+          created_at?: string
+          department?: string
+          email?: string
+          event_id?: string
+          id?: string
+          name?: string
+          user_id?: string
+          usn?: string
+          year?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string

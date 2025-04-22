@@ -4,20 +4,25 @@ import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock data for events
-const events = [
-  { id: 1, title: "Web Development Workshop" },
-  { id: 2, title: "AI & Machine Learning Hackathon" },
-  { id: 3, title: "Mobile App Development Series" },
-  { id: 4, title: "Cybersecurity Workshop" }
-];
-
-// Mock data for departments
 const departments = [
   "Computer Science & Engineering",
   "Information Technology",
@@ -26,11 +31,24 @@ const departments = [
   "Mechanical Engineering",
   "Civil Engineering",
   "Chemical Engineering",
-  "Biotechnology"
+  "Biotechnology",
 ];
 
-// Mock data for years
-const years = ["1st Year", "2nd Year", "3rd Year", "4th Year", "Postgraduate"];
+const years = [
+  "1st Year",
+  "2nd Year",
+  "3rd Year",
+  "4th Year",
+  "Postgraduate",
+];
+
+type Event = {
+  id: string;
+  title: string;
+  date: string;
+  description?: string | null;
+  [key: string]: unknown;
+};
 
 export default function RegisterPage() {
   const location = useLocation();
@@ -40,139 +58,213 @@ export default function RegisterPage() {
     email: "",
     department: "",
     year: "",
-    eventId: ""
+    eventId: "",
   });
-  
+
   const [errors, setErrors] = useState({
     name: "",
     usn: "",
     email: "",
     department: "",
     year: "",
-    eventId: ""
+    eventId: "",
   });
 
+  const [events, setEvents] = useState<Event[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+
+  const [formLoading, setFormLoading] = useState(false);
+
   useEffect(() => {
-    // Check if there's an event ID in the URL params
+    // Fetch events from Supabase
+    async function fetchEvents() {
+      setEventsLoading(true);
+      const { data, error } = await supabase
+        .from("events")
+        .select("id, title, date, description")
+        .order("date", { ascending: false });
+      if (error) {
+        toast({
+          title: "Failed to Load Events",
+          description: "Please refresh the page or try again later.",
+          variant: "destructive",
+        });
+        setEvents([]);
+      } else {
+        setEvents(data ?? []);
+      }
+      setEventsLoading(false);
+    }
+    fetchEvents();
+  }, []);
+
+  useEffect(() => {
     const params = new URLSearchParams(location.search);
     const eventId = params.get("event");
     if (eventId) {
-      setFormData(prev => ({ ...prev, eventId }));
+      setFormData((prev) => ({ ...prev, eventId }));
     }
   }, [location.search]);
 
   const validateForm = () => {
     let valid = true;
     const newErrors = { ...errors };
-    
+
     if (!formData.name.trim()) {
       newErrors.name = "Name is required";
       valid = false;
     } else {
       newErrors.name = "";
     }
-    
+
     if (!formData.usn.trim()) {
       newErrors.usn = "USN is required";
       valid = false;
-    } else if (!/^\d{1}\w{2}\d{2}\w{2}\d{3}$/i.test(formData.usn.trim())) {
+    } else if (
+      !/^\d{1}\w{2}\d{2}\w{2}\d{3}$/i.test(formData.usn.trim())
+    ) {
       newErrors.usn = "USN format not valid";
       valid = false;
     } else {
       newErrors.usn = "";
     }
-    
+
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
       valid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+    } else if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())
+    ) {
       newErrors.email = "Email format not valid";
       valid = false;
     } else {
       newErrors.email = "";
     }
-    
+
     if (!formData.department) {
       newErrors.department = "Department is required";
       valid = false;
     } else {
       newErrors.department = "";
     }
-    
+
     if (!formData.year) {
       newErrors.year = "Year is required";
       valid = false;
     } else {
       newErrors.year = "";
     }
-    
+
     if (!formData.eventId) {
       newErrors.eventId = "Event selection is required";
       valid = false;
     } else {
       newErrors.eventId = "";
     }
-    
+
     setErrors(newErrors);
     return valid;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (validateForm()) {
-      // In a real app, you would send the data to a server here
-      console.log("Form data submitted:", formData);
-      
-      // Show success toast
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (formLoading) return;
+    if (!validateForm()) return;
+
+    setFormLoading(true);
+
+    // Validate user is logged in
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.user?.id) {
       toast({
-        title: "Registration Successful!",
-        description: "You have successfully registered for the event.",
+        title: "Not Logged In",
+        description:
+          "You must be logged in to register for events.",
+        variant: "destructive",
       });
-      
-      // Reset form
-      setFormData({
-        name: "",
-        usn: "",
-        email: "",
-        department: "",
-        year: "",
-        eventId: ""
-      });
+      setFormLoading(false);
+      return;
     }
+
+    // Insert registration in Supabase
+    const { error } = await supabase.from("registrations").insert([
+      {
+        event_id: formData.eventId,
+        user_id: session.user.id,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        usn: formData.usn.trim(),
+        department: formData.department,
+        year: formData.year,
+      },
+    ]);
+
+    if (error) {
+      toast({
+        title: "Registration Failed",
+        description:
+          error.message ??
+          "Could not register. You may already be registered or there is a server error.",
+        variant: "destructive",
+      });
+      setFormLoading(false);
+      return;
+    }
+
+    toast({
+      title: "Registration Successful!",
+      description: "You have successfully registered for the event.",
+    });
+
+    setFormData({
+      name: "",
+      usn: "",
+      email: "",
+      department: "",
+      year: "",
+      eventId: "",
+    });
+    setFormLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-800 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">Register for an Event</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+            Register for an Event
+          </h1>
           <p className="mt-3 text-xl text-gray-600 dark:text-gray-300">
             Join our workshops and events by filling out the form below
           </p>
         </div>
-        
+
         <div className="max-w-md mx-auto">
           <Card className="shadow-lg animate-fade-in">
             <CardHeader>
               <CardTitle>Student Registration</CardTitle>
-              <CardDescription>Please fill in all the required fields.</CardDescription>
+              <CardDescription>
+                Please fill in all the required fields.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <form className="space-y-6" onSubmit={handleSubmit}>
                 {/* Name */}
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
-                  <Input 
+                  <Input
                     id="name"
                     name="name"
                     placeholder="Enter your full name"
@@ -180,13 +272,15 @@ export default function RegisterPage() {
                     onChange={handleChange}
                     className={errors.name ? "border-red-500" : ""}
                   />
-                  {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+                  {errors.name && (
+                    <p className="text-red-500 text-sm">{errors.name}</p>
+                  )}
                 </div>
-                
+
                 {/* USN */}
                 <div className="space-y-2">
                   <Label htmlFor="usn">University Seat Number (USN)</Label>
-                  <Input 
+                  <Input
                     id="usn"
                     name="usn"
                     placeholder="e.g., 1AB21CS001"
@@ -194,13 +288,15 @@ export default function RegisterPage() {
                     onChange={handleChange}
                     className={errors.usn ? "border-red-500" : ""}
                   />
-                  {errors.usn && <p className="text-red-500 text-sm">{errors.usn}</p>}
+                  {errors.usn && (
+                    <p className="text-red-500 text-sm">{errors.usn}</p>
+                  )}
                 </div>
-                
+
                 {/* Email */}
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
-                  <Input 
+                  <Input
                     id="email"
                     name="email"
                     type="email"
@@ -209,76 +305,114 @@ export default function RegisterPage() {
                     onChange={handleChange}
                     className={errors.email ? "border-red-500" : ""}
                   />
-                  {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+                  {errors.email && (
+                    <p className="text-red-500 text-sm">{errors.email}</p>
+                  )}
                 </div>
-                
+
                 {/* Department */}
                 <div className="space-y-2">
                   <Label htmlFor="department">Department</Label>
                   <Select
                     value={formData.department}
-                    onValueChange={(value) => handleSelectChange("department", value)}
+                    onValueChange={(value) =>
+                      handleSelectChange("department", value)
+                    }
                   >
-                    <SelectTrigger className={errors.department ? "border-red-500" : ""}>
+                    <SelectTrigger
+                      className={errors.department ? "border-red-500" : ""}
+                    >
                       <SelectValue placeholder="Select your department" />
                     </SelectTrigger>
                     <SelectContent>
-                      {departments.map(dept => (
+                      {departments.map((dept) => (
                         <SelectItem key={dept} value={dept}>
                           {dept}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.department && <p className="text-red-500 text-sm">{errors.department}</p>}
+                  {errors.department && (
+                    <p className="text-red-500 text-sm">
+                      {errors.department}
+                    </p>
+                  )}
                 </div>
-                
+
                 {/* Year */}
                 <div className="space-y-2">
                   <Label htmlFor="year">Year of Study</Label>
                   <Select
                     value={formData.year}
-                    onValueChange={(value) => handleSelectChange("year", value)}
+                    onValueChange={(value) =>
+                      handleSelectChange("year", value)
+                    }
                   >
-                    <SelectTrigger className={errors.year ? "border-red-500" : ""}>
+                    <SelectTrigger
+                      className={errors.year ? "border-red-500" : ""}
+                    >
                       <SelectValue placeholder="Select your year" />
                     </SelectTrigger>
                     <SelectContent>
-                      {years.map(year => (
+                      {years.map((year) => (
                         <SelectItem key={year} value={year}>
                           {year}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.year && <p className="text-red-500 text-sm">{errors.year}</p>}
+                  {errors.year && (
+                    <p className="text-red-500 text-sm">{errors.year}</p>
+                  )}
                 </div>
-                
+
                 {/* Event Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="event">Select Event/Workshop</Label>
                   <Select
                     value={formData.eventId}
-                    onValueChange={(value) => handleSelectChange("eventId", value)}
+                    disabled={eventsLoading}
+                    onValueChange={(value) =>
+                      handleSelectChange("eventId", value)
+                    }
                   >
-                    <SelectTrigger className={errors.eventId ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Choose an event to attend" />
+                    <SelectTrigger
+                      className={errors.eventId ? "border-red-500" : ""}
+                    >
+                      <SelectValue
+                        placeholder={
+                          eventsLoading
+                            ? "Loading events..."
+                            : "Choose an event to attend"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {events.map(event => (
-                        <SelectItem key={event.id} value={event.id.toString()}>
+                      {events.map((event) => (
+                        <SelectItem key={event.id} value={event.id}>
                           {event.title}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.eventId && <p className="text-red-500 text-sm">{errors.eventId}</p>}
+                  {errors.eventId && (
+                    <p className="text-red-500 text-sm">{errors.eventId}</p>
+                  )}
+                  {events.length === 0 && !eventsLoading && (
+                    <p className="text-sm text-gray-500">
+                      No events available for registration.
+                    </p>
+                  )}
                 </div>
               </form>
             </CardContent>
             <CardFooter>
-              <Button className="w-full btn-primary" onClick={handleSubmit}>
-                Register Now
+              <Button
+                className="w-full btn-primary"
+                disabled={formLoading}
+                onClick={handleSubmit}
+              >
+                {formLoading ? "Registering..." : "Register Now"}
               </Button>
             </CardFooter>
           </Card>
