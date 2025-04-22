@@ -1,8 +1,13 @@
 
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useEffect } from "react";
 
 export default function HomePage() {
+  useEffect(() => {
+    console.log("HomePage component mounted");
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}

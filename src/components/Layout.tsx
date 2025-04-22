@@ -1,5 +1,5 @@
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { NavBar } from "./NavBar";
 import { Footer } from "./Footer";
 
@@ -8,6 +8,10 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
+  useEffect(() => {
+    console.log("Layout component mounted");
+  }, []);
+  
   return (
     <div className="flex flex-col min-h-screen">
       <NavBar />
