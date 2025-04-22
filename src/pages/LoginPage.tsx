@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,22 +9,22 @@ import { Toaster } from "@/components/ui/toaster";
 import { Lock, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-// TODO: Replace with the 3 allowed admin credentials you wish to use
+// Hardcoded admin credentials
 const ALLOWED_ADMINS = [
   {
-    email: "admin1@example.com", // Provide this value
-    password: "password1",       // Provide this value
-    username: "adminuser1"       // Provide this value if used (optional)
+    email: "uvcosmos2@gmail.com", 
+    password: "123Sumit_",
+    username: "Sumit Raj"
   },
   {
-    email: "admin2@example.com", // Provide this value
-    password: "password2",
-    username: "adminuser2"
+    email: "srsaini2004@gmail.com", 
+    password: "123Saini_",
+    username: "Saini"
   },
   {
-    email: "admin3@example.com", // Provide this value
-    password: "password3",
-    username: "adminuser3"
+    email: "sumitraj23aiml@rnsit.ac.in", 
+    password: "123Sumitraj_",
+    username: "Sumit"
   }
 ];
 
