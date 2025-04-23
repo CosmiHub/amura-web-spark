@@ -149,15 +149,21 @@ export default function AuthPage() {
       const { error } = await supabase.auth.signUp({
         email: signupForm.email.trim(),
         password: signupForm.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth`,
+          data: {
+            email: signupForm.email.trim(),
+          }
+        }
       });
 
       if (error) throw error;
 
       toast({
         title: "Signup Successful",
-        description: "Please check your email to verify your account.",
+        description: "You have been automatically logged in.",
       });
-      setActiveTab("login");
+      navigate("/");
     } catch (error: any) {
       toast({
         title: "Signup Failed",
