@@ -27,8 +27,11 @@ export function NavBar() {
     { name: "Certificate Download", path: "/certificates" },
     { name: "Achievements", path: "/achievements" },
     { name: "About Us", path: "/about" },
+    // Remove Admin option when user is logged in
+    ...(user ? [] : [
+      { name: "Admin", path: "/login", showAlways: true }
+    ]),
     { name: "Login", path: "/auth", adminOnly: false },
-    { name: "Admin", path: "/login", showAlways: true },
     { name: "Dashboard", path: "/dashboard", adminOnly: true }
   ];
 
