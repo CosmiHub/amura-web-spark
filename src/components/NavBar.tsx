@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, X, LogOut, UserCog } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "./ui/button";
@@ -11,6 +11,7 @@ type NavItem = {
   name: string;
   path: string;
   adminOnly?: boolean;
+  showAlways?: boolean;
 };
 
 export function NavBar() {
@@ -27,6 +28,7 @@ export function NavBar() {
     { name: "Achievements", path: "/achievements" },
     { name: "About Us", path: "/about" },
     { name: "Login", path: "/auth", adminOnly: false },
+    { name: "Admin", path: "/login", showAlways: true },
     { name: "Dashboard", path: "/dashboard", adminOnly: true }
   ];
 
@@ -69,20 +71,32 @@ export function NavBar() {
               
               // Skip if it's an admin-only item and user is not admin
               if (item.adminOnly && !user) return null;
+
+              // Always show items marked with showAlways
+              if (item.showAlways || !item.adminOnly || (item.adminOnly && user)) {
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      location.pathname === item.path
+                        ? "text-amura-purple border-b-2 border-amura-purple"
+                        : "text-gray-700 dark:text-gray-300 hover:text-amura-purple dark:hover:text-amura-purple"
+                    }`}
+                  >
+                    {item.name === "Admin" ? (
+                      <div className="flex items-center">
+                        <UserCog className="h-4 w-4 mr-1" />
+                        {item.name}
+                      </div>
+                    ) : (
+                      item.name
+                    )}
+                  </Link>
+                );
+              }
               
-              return (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    location.pathname === item.path
-                      ? "text-amura-purple border-b-2 border-amura-purple"
-                      : "text-gray-700 dark:text-gray-300 hover:text-amura-purple dark:hover:text-amura-purple"
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              );
+              return null;
             })}
             
             {user && (
@@ -125,21 +139,33 @@ export function NavBar() {
               
               // Skip if it's an admin-only item and user is not admin
               if (item.adminOnly && !user) return null;
+
+              // Always show items marked with showAlways
+              if (item.showAlways || !item.adminOnly || (item.adminOnly && user)) {
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    className={`block px-3 py-2 rounded-md text-base font-medium ${
+                      location.pathname === item.path
+                        ? "text-amura-purple bg-amura-purple-light"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    }`}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {item.name === "Admin" ? (
+                      <div className="flex items-center">
+                        <UserCog className="h-4 w-4 mr-1" />
+                        {item.name}
+                      </div>
+                    ) : (
+                      item.name
+                    )}
+                  </Link>
+                );
+              }
               
-              return (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  className={`block px-3 py-2 rounded-md text-base font-medium ${
-                    location.pathname === item.path
-                      ? "text-amura-purple bg-amura-purple-light"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  }`}
-                  onClick={() => setIsOpen(false)}
-                >
-                  {item.name}
-                </Link>
-              );
+              return null;
             })}
             
             {user && (

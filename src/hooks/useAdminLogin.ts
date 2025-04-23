@@ -71,47 +71,75 @@ export function useAdminLogin() {
       return;
     }
 
+    console.log("Admin found in allowed list:", foundAdmin.email);
+
     // Try logging in with Supabase
-    const { data: userExists, error: loginError } = await supabase.auth.signInWithPassword({
-      email: credentials.email.trim(),
-      password: credentials.password,
-    });
-
-    if (loginError) {
-      toast({
-        title: "Login Failed",
-        description: "Unable to authenticate. Please contact system administrator.",
-        variant: "destructive"
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: credentials.email.trim(),
+        password: credentials.password,
       });
-      setLoading(false);
-      return;
-    }
 
-    // Check admin role
-    if (userExists?.session?.user) {
-      const { data: rolesData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userExists.session.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-
-      if (!rolesData) {
+      if (error) {
+        console.error("Supabase login error:", error);
         toast({
-          title: "Access Denied",
-          description: "You do not have administrator privileges.",
+          title: "Login Failed",
+          description: "Unable to authenticate. Please contact system administrator.",
           variant: "destructive"
         });
-        await supabase.auth.signOut();
         setLoading(false);
         return;
       }
 
+      // Check admin role
+      if (data?.user) {
+        console.log("User authenticated with Supabase:", data.user.id);
+        
+        const { data: rolesData, error: rolesError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+
+        if (rolesError) {
+          console.error("Error checking admin role:", rolesError);
+        }
+
+        console.log("Admin role check result:", rolesData);
+
+        if (!rolesData) {
+          // Try to add admin role
+          const { error: insertError } = await supabase
+            .from("user_roles")
+            .insert({ user_id: data.user.id, role: "admin" });
+            
+          if (insertError) {
+            console.error("Error setting admin role:", insertError);
+            toast({
+              title: "Access Denied",
+              description: "Failed to set administrator privileges.",
+              variant: "destructive"
+            });
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
+        }
+
+        toast({
+          title: "Login Successful",
+          description: "Redirecting to administrator dashboard.",
+        });
+        setTimeout(() => navigate("/dashboard"), 1000);
+      }
+    } catch (error) {
+      console.error("Unexpected error during login:", error);
       toast({
-        title: "Login Successful",
-        description: "Redirecting to administrator dashboard.",
+        title: "Login Failed",
+        description: "An unexpected error occurred. Please try again later.",
+        variant: "destructive"
       });
-      setTimeout(() => navigate("/dashboard"), 1000);
     }
 
     setLoading(false);

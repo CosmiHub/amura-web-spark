@@ -42,10 +42,10 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Admin Login
+            Administrator Access
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Access restricted to AMURA administrators only
+            This area is restricted to AMURA administrators only
           </p>
         </div>
         <AdminLoginForm />
