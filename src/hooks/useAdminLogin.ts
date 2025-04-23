@@ -72,75 +72,48 @@ export function useAdminLogin() {
     }
 
     // Try logging in with Supabase
-    const { data: userExists, error: checkError } = await supabase.auth.signInWithPassword({
+    const { data: userExists, error: loginError } = await supabase.auth.signInWithPassword({
       email: credentials.email.trim(),
       password: credentials.password,
     });
 
-    if (checkError) {
-      // If login failed, maybe user doesn't exist; try to create account
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: credentials.email.trim(),
-        password: credentials.password,
+    if (loginError) {
+      toast({
+        title: "Login Failed",
+        description: "Unable to authenticate. Please contact system administrator.",
+        variant: "destructive"
       });
+      setLoading(false);
+      return;
+    }
 
-      if (signUpError) {
-        toast({
-          title: "Login Failed",
-          description: "Unable to authenticate. Please contact system administrator.",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Set admin role if created
-      if (data.user) {
-        try {
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .insert({ user_id: data.user.id, role: 'admin' });
-
-          if (roleError) throw roleError;
-        } catch (error) {
-          console.error("Error setting admin role:", error);
-        }
-
-        toast({
-          title: "Account Created",
-          description: "Administrator account has been created and you are now logged in.",
-        });
-        setTimeout(() => navigate("/dashboard"), 1000);
-      }
-    } else if (userExists?.session?.user) {
-      // User exists and login successful
-      const userId = userExists.session.user.id;
-      // Check if user already has admin role
+    // Check admin role
+    if (userExists?.session?.user) {
       const { data: rolesData } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", userId)
+        .eq("user_id", userExists.session.user.id)
         .eq("role", "admin")
         .maybeSingle();
 
       if (!rolesData) {
-        // Add admin role if not already present
-        try {
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .insert({ user_id: userId, role: 'admin' });
-
-          if (roleError) throw roleError;
-        } catch (error) {
-          console.error("Error setting admin role:", error);
-        }
+        toast({
+          title: "Access Denied",
+          description: "You do not have administrator privileges.",
+          variant: "destructive"
+        });
+        await supabase.auth.signOut();
+        setLoading(false);
+        return;
       }
+
       toast({
         title: "Login Successful",
         description: "Redirecting to administrator dashboard.",
       });
       setTimeout(() => navigate("/dashboard"), 1000);
     }
+
     setLoading(false);
   };
 
