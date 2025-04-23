@@ -147,7 +147,7 @@ export type Database = {
           event_id: string
           id?: string
           name: string
-          user_id: string
+          user_id?: string
           usn: string
           year: string
         }

@@ -1,8 +1,11 @@
 
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, LogOut } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "./ui/button";
+import { toast } from "@/components/ui/use-toast";
 
 type NavItem = {
   name: string;
@@ -13,8 +16,8 @@ type NavItem = {
 export function NavBar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  // Mock authentication - in a real app you would have proper authentication
-  const [isAdmin] = useState(false);
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   const navItems: NavItem[] = [
     { name: "Home", path: "/" },
@@ -23,12 +26,29 @@ export function NavBar() {
     { name: "Certificate Download", path: "/certificates" },
     { name: "Achievements", path: "/achievements" },
     { name: "About Us", path: "/about" },
-    { name: "Login", path: "/login", adminOnly: false }, // Set to true to hide when admin is logged in
+    { name: "Login", path: "/auth", adminOnly: false },
     { name: "Dashboard", path: "/dashboard", adminOnly: true }
   ];
 
   const toggleNav = () => {
     setIsOpen(!isOpen);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account.",
+      });
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Could not log out. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -44,24 +64,39 @@ export function NavBar() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
             {navItems.map((item) => {
-              if (item.adminOnly && !isAdmin) return null;
-              if (!item.adminOnly || (item.adminOnly && isAdmin)) {
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.path}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      location.pathname === item.path
-                        ? "text-amura-purple border-b-2 border-amura-purple"
-                        : "text-gray-700 dark:text-gray-300 hover:text-amura-purple dark:hover:text-amura-purple"
-                    }`}
-                  >
-                    {item.name}
-                  </Link>
-                );
-              }
-              return null;
+              // Skip Login if user is logged in
+              if (item.name === "Login" && user) return null;
+              
+              // Skip if it's an admin-only item and user is not admin
+              if (item.adminOnly && !user) return null;
+              
+              return (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    location.pathname === item.path
+                      ? "text-amura-purple border-b-2 border-amura-purple"
+                      : "text-gray-700 dark:text-gray-300 hover:text-amura-purple dark:hover:text-amura-purple"
+                  }`}
+                >
+                  {item.name}
+                </Link>
+              );
             })}
+            
+            {user && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-gray-700 dark:text-gray-300 hover:text-amura-purple dark:hover:text-amura-purple"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            )}
+            
             <div className="pl-4">
               <ThemeToggle />
             </div>
@@ -85,25 +120,42 @@ export function NavBar() {
         <div className="md:hidden bg-white dark:bg-gray-900 shadow-lg animate-fade-in">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             {navItems.map((item) => {
-              if (item.adminOnly && !isAdmin) return null;
-              if (!item.adminOnly || (item.adminOnly && isAdmin)) {
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.path}
-                    className={`block px-3 py-2 rounded-md text-base font-medium ${
-                      location.pathname === item.path
-                        ? "text-amura-purple bg-amura-purple-light"
-                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    }`}
-                    onClick={() => setIsOpen(false)}
-                  >
-                    {item.name}
-                  </Link>
-                );
-              }
-              return null;
+              // Skip Login if user is logged in
+              if (item.name === "Login" && user) return null;
+              
+              // Skip if it's an admin-only item and user is not admin
+              if (item.adminOnly && !user) return null;
+              
+              return (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  className={`block px-3 py-2 rounded-md text-base font-medium ${
+                    location.pathname === item.path
+                      ? "text-amura-purple bg-amura-purple-light"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                  onClick={() => setIsOpen(false)}
+                >
+                  {item.name}
+                </Link>
+              );
             })}
+            
+            {user && (
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setIsOpen(false);
+                }}
+                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <span className="flex items-center">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </span>
+              </button>
+            )}
           </div>
         </div>
       )}

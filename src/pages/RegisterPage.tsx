@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,9 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const departments = [
   "Computer Science & Engineering",
@@ -52,6 +55,9 @@ type Event = {
 
 export default function RegisterPage() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
   const [formData, setFormData] = useState({
     name: "",
     usn: "",
@@ -72,8 +78,14 @@ export default function RegisterPage() {
 
   const [events, setEvents] = useState<Event[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
-
   const [formLoading, setFormLoading] = useState(false);
+
+  useEffect(() => {
+    // Pre-fill email if user is logged in
+    if (user?.email) {
+      setFormData(prev => ({ ...prev, email: user.email || "" }));
+    }
+  }, [user]);
 
   useEffect(() => {
     // Fetch events from Supabase
@@ -180,29 +192,23 @@ export default function RegisterPage() {
     if (formLoading) return;
     if (!validateForm()) return;
 
-    setFormLoading(true);
-
-    // Validate user is logged in
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.user?.id) {
+    if (!user) {
       toast({
-        title: "Not Logged In",
-        description:
-          "You must be logged in to register for events.",
+        title: "Authentication Required",
+        description: "Please log in before registering for events.",
         variant: "destructive",
       });
-      setFormLoading(false);
+      navigate("/auth");
       return;
     }
+
+    setFormLoading(true);
 
     // Insert registration in Supabase
     const { error } = await supabase.from("registrations").insert([
       {
         event_id: formData.eventId,
-        user_id: session.user.id,
+        user_id: user.id,
         name: formData.name.trim(),
         email: formData.email.trim(),
         usn: formData.usn.trim(),
@@ -231,7 +237,7 @@ export default function RegisterPage() {
     setFormData({
       name: "",
       usn: "",
-      email: "",
+      email: user?.email || "",
       department: "",
       year: "",
       eventId: "",
@@ -252,6 +258,16 @@ export default function RegisterPage() {
         </div>
 
         <div className="max-w-md mx-auto">
+          {!user && (
+            <Alert className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Authentication Required</AlertTitle>
+              <AlertDescription>
+                Please <Button variant="link" onClick={() => navigate("/auth")} className="p-0">log in</Button> to register for events.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <Card className="shadow-lg animate-fade-in">
             <CardHeader>
               <CardTitle>Student Registration</CardTitle>
@@ -271,6 +287,7 @@ export default function RegisterPage() {
                     value={formData.name}
                     onChange={handleChange}
                     className={errors.name ? "border-red-500" : ""}
+                    disabled={!user}
                   />
                   {errors.name && (
                     <p className="text-red-500 text-sm">{errors.name}</p>
@@ -287,6 +304,7 @@ export default function RegisterPage() {
                     value={formData.usn}
                     onChange={handleChange}
                     className={errors.usn ? "border-red-500" : ""}
+                    disabled={!user}
                   />
                   {errors.usn && (
                     <p className="text-red-500 text-sm">{errors.usn}</p>
@@ -304,6 +322,8 @@ export default function RegisterPage() {
                     value={formData.email}
                     onChange={handleChange}
                     className={errors.email ? "border-red-500" : ""}
+                    readOnly={!!user?.email}
+                    disabled={!user}
                   />
                   {errors.email && (
                     <p className="text-red-500 text-sm">{errors.email}</p>
@@ -318,6 +338,7 @@ export default function RegisterPage() {
                     onValueChange={(value) =>
                       handleSelectChange("department", value)
                     }
+                    disabled={!user}
                   >
                     <SelectTrigger
                       className={errors.department ? "border-red-500" : ""}
@@ -347,6 +368,7 @@ export default function RegisterPage() {
                     onValueChange={(value) =>
                       handleSelectChange("year", value)
                     }
+                    disabled={!user}
                   >
                     <SelectTrigger
                       className={errors.year ? "border-red-500" : ""}
@@ -371,7 +393,7 @@ export default function RegisterPage() {
                   <Label htmlFor="event">Select Event/Workshop</Label>
                   <Select
                     value={formData.eventId}
-                    disabled={eventsLoading}
+                    disabled={eventsLoading || !user}
                     onValueChange={(value) =>
                       handleSelectChange("eventId", value)
                     }
@@ -409,7 +431,7 @@ export default function RegisterPage() {
             <CardFooter>
               <Button
                 className="w-full btn-primary"
-                disabled={formLoading}
+                disabled={formLoading || !user}
                 onClick={handleSubmit}
               >
                 {formLoading ? "Registering..." : "Register Now"}

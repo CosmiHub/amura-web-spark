@@ -12,9 +12,11 @@ import CertificatePage from "./pages/CertificatePage";
 import AchievementsPage from "./pages/AchievementsPage";
 import AboutPage from "./pages/AboutPage";
 import LoginPage from "./pages/LoginPage";
+import AuthPage from "./pages/AuthPage";
 import DashboardPage from "./pages/DashboardPage";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
+import { AuthProvider } from "./context/AuthContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,19 +37,22 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Layout><HomePage /></Layout>} />
-            <Route path="/events" element={<Layout><EventsPage /></Layout>} />
-            <Route path="/register" element={<Layout><RegisterPage /></Layout>} />
-            <Route path="/certificates" element={<Layout><CertificatePage /></Layout>} />
-            <Route path="/achievements" element={<Layout><AchievementsPage /></Layout>} />
-            <Route path="/about" element={<Layout><AboutPage /></Layout>} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="*" element={<Layout><NotFound /></Layout>} />
-          </Routes>
-        </BrowserRouter>
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Layout><HomePage /></Layout>} />
+              <Route path="/events" element={<Layout><EventsPage /></Layout>} />
+              <Route path="/register" element={<Layout><RegisterPage /></Layout>} />
+              <Route path="/certificates" element={<Layout><CertificatePage /></Layout>} />
+              <Route path="/achievements" element={<Layout><AchievementsPage /></Layout>} />
+              <Route path="/about" element={<Layout><AboutPage /></Layout>} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="*" element={<Layout><NotFound /></Layout>} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

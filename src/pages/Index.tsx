@@ -1,13 +1,15 @@
 
 import { useEffect } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
 const Index = () => {
+  const location = useLocation();
+  
   useEffect(() => {
-    console.log("Index component rendering");
-  }, []);
+    console.log("Index component rendering", location.pathname);
+  }, [location.pathname]);
 
-  // Redirect to the HomePage component
+  // Redirect to the home page
   return <Navigate to="/" replace />;
 };
 
