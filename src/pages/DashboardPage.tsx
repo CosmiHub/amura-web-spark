@@ -10,30 +10,18 @@ export default function DashboardPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user exists
-    if (!user) {
+    // Only check for authentication - if logged in and is admin, allow access
+    if (!user || !isAdmin()) {
       toast({
         title: "Access Denied",
-        description: "Please log in to access the dashboard.",
+        description: "You need administrator privileges to access this page.",
         variant: "destructive",
       });
       navigate("/login");
-      return;
-    }
-
-    // Check if user has admin privileges
-    if (!isAdmin()) {
-      toast({
-        title: "Access Denied",
-        description: "You don't have administrator privileges.",
-        variant: "destructive",
-      });
-      navigate("/");
-      return;
     }
   }, [user, isAdmin, navigate]);
 
-  // Don't render anything until we've checked permissions
+  // Return early if not authenticated or not admin
   if (!user || !isAdmin()) {
     return null;
   }
