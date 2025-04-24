@@ -36,6 +36,30 @@ export type Database = {
         }
         Relationships: []
       }
+      activity_logs: {
+        Row: {
+          activity_type: string
+          created_at: string
+          description: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          description: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       certificates: {
         Row: {
           certificate_url: string | null
@@ -84,6 +108,7 @@ export type Database = {
           image_url: string | null
           location: string | null
           max_participants: number | null
+          status: string | null
           title: string
         }
         Insert: {
@@ -95,6 +120,7 @@ export type Database = {
           image_url?: string | null
           location?: string | null
           max_participants?: number | null
+          status?: string | null
           title: string
         }
         Update: {
@@ -106,6 +132,7 @@ export type Database = {
           image_url?: string | null
           location?: string | null
           max_participants?: number | null
+          status?: string | null
           title?: string
         }
         Relationships: []
