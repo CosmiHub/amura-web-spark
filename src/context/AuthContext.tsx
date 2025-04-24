@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -6,6 +7,7 @@ interface AdminUser {
   email: string;
   username: string;
   isAdmin: boolean;
+  id?: string; // Add id property to fix the TypeScript error
 }
 
 interface AuthContextProps {

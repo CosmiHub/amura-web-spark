@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { ALLOWED_ADMINS } from "@/constants/admins";
 
 type State = {
@@ -74,15 +73,13 @@ export function useAdminLogin() {
     console.log("Admin found in allowed list:", foundAdmin.email);
 
     try {
-      // Since we've already verified the admin credentials against our hardcoded list,
-      // we'll simply create a session using the admin credentials
-      // This approach bypasses Supabase authentication for admin users
-      
       // Store admin info in localStorage for session persistence
+      // Add a generated id property to match User interface expectations
       localStorage.setItem("adminUser", JSON.stringify({
         email: foundAdmin.email,
         username: foundAdmin.username,
-        isAdmin: true
+        isAdmin: true,
+        id: `admin-${Date.now()}` // Add unique ID to admin user
       }));
       
       toast({
