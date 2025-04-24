@@ -56,7 +56,7 @@ type Event = {
 export default function RegisterPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -91,21 +91,28 @@ export default function RegisterPage() {
     // Fetch events from Supabase
     async function fetchEvents() {
       setEventsLoading(true);
-      const { data, error } = await supabase
-        .from("events")
-        .select("id, title, date, description")
-        .order("date", { ascending: false });
-      if (error) {
+      try {
+        const { data, error } = await supabase
+          .from("events")
+          .select("id, title, date, description")
+          .order("date", { ascending: false });
+          
+        if (error) {
+          throw error;
+        }
+        
+        setEvents(data ?? []);
+      } catch (error: any) {
+        console.error("Error fetching events:", error);
         toast({
           title: "Failed to Load Events",
           description: "Please refresh the page or try again later.",
           variant: "destructive",
         });
         setEvents([]);
-      } else {
-        setEvents(data ?? []);
+      } finally {
+        setEventsLoading(false);
       }
-      setEventsLoading(false);
     }
     fetchEvents();
   }, []);
@@ -204,20 +211,48 @@ export default function RegisterPage() {
 
     setFormLoading(true);
 
-    // Insert registration in Supabase
-    const { error } = await supabase.from("registrations").insert([
-      {
-        event_id: formData.eventId,
-        user_id: user.id,
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        usn: formData.usn.trim(),
-        department: formData.department,
-        year: formData.year,
-      },
-    ]);
+    try {
+      // Insert registration in Supabase
+      const { error } = await supabase.from("registrations").insert([
+        {
+          event_id: formData.eventId,
+          user_id: user.id,
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          usn: formData.usn.trim(),
+          department: formData.department,
+          year: formData.year,
+        },
+      ]);
 
-    if (error) {
+      if (error) {
+        console.error("Registration error:", error);
+        throw error;
+      }
+
+      toast({
+        title: "Registration Successful!",
+        description: "You have successfully registered for the event.",
+      });
+
+      // Log this activity
+      await supabase.from("activity_logs").insert([
+        {
+          user_id: user.id,
+          activity_type: "event_registration",
+          description: `Registered for event`,
+        },
+      ]);
+
+      setFormData({
+        name: "",
+        usn: "",
+        email: user?.email || "",
+        department: "",
+        year: "",
+        eventId: "",
+      });
+    } catch (error: any) {
       toast({
         title: "Registration Failed",
         description:
@@ -225,25 +260,13 @@ export default function RegisterPage() {
           "Could not register. You may already be registered or there is a server error.",
         variant: "destructive",
       });
+    } finally {
       setFormLoading(false);
-      return;
     }
-
-    toast({
-      title: "Registration Successful!",
-      description: "You have successfully registered for the event.",
-    });
-
-    setFormData({
-      name: "",
-      usn: "",
-      email: user?.email || "",
-      department: "",
-      year: "",
-      eventId: "",
-    });
-    setFormLoading(false);
   };
+
+  // Check if the user is authenticated
+  const isAuthenticated = !!user;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-800 py-12">
@@ -258,7 +281,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="max-w-md mx-auto">
-          {!user && (
+          {!isAuthenticated && (
             <Alert className="mb-6">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Authentication Required</AlertTitle>
@@ -287,7 +310,7 @@ export default function RegisterPage() {
                     value={formData.name}
                     onChange={handleChange}
                     className={errors.name ? "border-red-500" : ""}
-                    disabled={!user}
+                    disabled={!isAuthenticated}
                   />
                   {errors.name && (
                     <p className="text-red-500 text-sm">{errors.name}</p>
@@ -304,7 +327,7 @@ export default function RegisterPage() {
                     value={formData.usn}
                     onChange={handleChange}
                     className={errors.usn ? "border-red-500" : ""}
-                    disabled={!user}
+                    disabled={!isAuthenticated}
                   />
                   {errors.usn && (
                     <p className="text-red-500 text-sm">{errors.usn}</p>
@@ -323,7 +346,7 @@ export default function RegisterPage() {
                     onChange={handleChange}
                     className={errors.email ? "border-red-500" : ""}
                     readOnly={!!user?.email}
-                    disabled={!user}
+                    disabled={!isAuthenticated}
                   />
                   {errors.email && (
                     <p className="text-red-500 text-sm">{errors.email}</p>
@@ -338,7 +361,7 @@ export default function RegisterPage() {
                     onValueChange={(value) =>
                       handleSelectChange("department", value)
                     }
-                    disabled={!user}
+                    disabled={!isAuthenticated}
                   >
                     <SelectTrigger
                       className={errors.department ? "border-red-500" : ""}
@@ -368,7 +391,7 @@ export default function RegisterPage() {
                     onValueChange={(value) =>
                       handleSelectChange("year", value)
                     }
-                    disabled={!user}
+                    disabled={!isAuthenticated}
                   >
                     <SelectTrigger
                       className={errors.year ? "border-red-500" : ""}
@@ -393,7 +416,7 @@ export default function RegisterPage() {
                   <Label htmlFor="event">Select Event/Workshop</Label>
                   <Select
                     value={formData.eventId}
-                    disabled={eventsLoading || !user}
+                    disabled={eventsLoading || !isAuthenticated}
                     onValueChange={(value) =>
                       handleSelectChange("eventId", value)
                     }
@@ -431,7 +454,7 @@ export default function RegisterPage() {
             <CardFooter>
               <Button
                 className="w-full btn-primary"
-                disabled={formLoading || !user}
+                disabled={formLoading || !isAuthenticated}
                 onClick={handleSubmit}
               >
                 {formLoading ? "Registering..." : "Register Now"}

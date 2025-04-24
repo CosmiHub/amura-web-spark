@@ -117,12 +117,14 @@ export default function AuthPage() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: loginForm.email.trim(),
         password: loginForm.password,
       });
 
       if (error) throw error;
+
+      console.log("Login successful", data);
 
       toast({
         title: "Login Successful",
@@ -130,6 +132,7 @@ export default function AuthPage() {
       });
       navigate("/");
     } catch (error: any) {
+      console.error("Login error:", error);
       toast({
         title: "Login Failed",
         description: error.message || "Unable to log in. Please try again.",
@@ -146,7 +149,7 @@ export default function AuthPage() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: signupForm.email.trim(),
         password: signupForm.password,
         options: {
@@ -159,12 +162,23 @@ export default function AuthPage() {
 
       if (error) throw error;
 
-      toast({
-        title: "Signup Successful",
-        description: "You have been automatically logged in.",
-      });
-      navigate("/");
+      console.log("Signup successful", data);
+
+      // If no error, but no confirmation needed (email verification disabled)
+      if (data?.user) {
+        toast({
+          title: "Signup Successful",
+          description: "Your account has been created and you are now logged in.",
+        });
+        navigate("/");
+      } else {
+        toast({
+          title: "Signup Successful",
+          description: "Please check your email for verification instructions.",
+        });
+      }
     } catch (error: any) {
+      console.error("Signup error:", error);
       toast({
         title: "Signup Failed",
         description: error.message || "Unable to sign up. Please try again.",

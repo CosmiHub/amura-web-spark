@@ -7,7 +7,7 @@ interface AdminUser {
   email: string;
   username: string;
   isAdmin: boolean;
-  id?: string; // Add id property to fix the TypeScript error
+  id: string; // Make sure id is always defined
 }
 
 interface AuthContextProps {
