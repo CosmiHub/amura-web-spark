@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -11,12 +12,14 @@ import { EventManagement } from "@/components/dashboard/EventManagement";
 import { ActivityLog } from "@/components/dashboard/ActivityLog";
 
 export default function DashboardPage() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
+    // Strict check for admin access
     if (!user || !isAdmin()) {
+      console.log("Access denied to dashboard: user not admin", { user });
       toast({
         title: "Access Denied",
         description: "You need administrator privileges to access this page.",
@@ -26,12 +29,15 @@ export default function DashboardPage() {
     }
   }, [user, isAdmin, navigate]);
 
+  // If not admin, show nothing during redirect
   if (!user || !isAdmin()) {
     return null;
   }
 
   const handleLogout = () => {
-    navigate("/");
+    signOut().then(() => {
+      navigate("/login");
+    });
   };
 
   return (
@@ -40,6 +46,9 @@ export default function DashboardPage() {
         <div className="w-64 h-screen sticky top-0 bg-white dark:bg-gray-800 shadow-md hidden md:block">
           <div className="p-6">
             <h2 className="text-xl font-bold text-amura-purple">AMURA Admin</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Logged in as {('username' in user) ? user.username : user.email}
+            </p>
           </div>
           
           <div className="mt-4">

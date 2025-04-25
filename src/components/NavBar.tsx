@@ -18,7 +18,8 @@ export function NavBar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin: checkIsAdmin } = useAuth();
+  const isAdminUser = user && checkIsAdmin();
 
   const navItems: NavItem[] = [
     { name: "Home", path: "/" },
@@ -27,11 +28,13 @@ export function NavBar() {
     { name: "Certificate Download", path: "/certificates" },
     { name: "Achievements", path: "/achievements" },
     { name: "About Us", path: "/about" },
-    // Remove Admin option when user is logged in
-    ...(user ? [] : [
+    // Only show Admin link when not logged in or not already an admin
+    ...(isAdminUser ? [] : [
       { name: "Admin", path: "/login", showAlways: true }
     ]),
+    // Show Login link only when not logged in
     { name: "Login", path: "/auth", adminOnly: false },
+    // Show Dashboard link only for admins
     { name: "Dashboard", path: "/dashboard", adminOnly: true }
   ];
 
@@ -73,10 +76,10 @@ export function NavBar() {
               if (item.name === "Login" && user) return null;
               
               // Skip if it's an admin-only item and user is not admin
-              if (item.adminOnly && !user) return null;
+              if (item.adminOnly && !isAdminUser) return null;
 
               // Always show items marked with showAlways
-              if (item.showAlways || !item.adminOnly || (item.adminOnly && user)) {
+              if (item.showAlways || !item.adminOnly || (item.adminOnly && isAdminUser)) {
                 return (
                   <Link
                     key={item.name}
@@ -141,10 +144,10 @@ export function NavBar() {
               if (item.name === "Login" && user) return null;
               
               // Skip if it's an admin-only item and user is not admin
-              if (item.adminOnly && !user) return null;
+              if (item.adminOnly && !isAdminUser) return null;
 
               // Always show items marked with showAlways
-              if (item.showAlways || !item.adminOnly || (item.adminOnly && user)) {
+              if (item.showAlways || !item.adminOnly || (item.adminOnly && isAdminUser)) {
                 return (
                   <Link
                     key={item.name}

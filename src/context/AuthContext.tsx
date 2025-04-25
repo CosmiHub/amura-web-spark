@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -7,7 +6,7 @@ interface AdminUser {
   email: string;
   username: string;
   isAdmin: boolean;
-  id: string; // Make sure id is always defined
+  id: string;
 }
 
 interface AuthContextProps {
@@ -44,10 +43,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       try {
         const adminUser = JSON.parse(adminUserStr) as AdminUser;
         setUser(adminUser);
+        setSession(null); // No Supabase session for admin users
         setLoading(false);
+        console.log("Admin user found in localStorage:", adminUser.email);
         return;
       } catch (error) {
         // If parsing fails, continue with regular auth
+        console.error("Error parsing admin user from localStorage:", error);
         localStorage.removeItem("adminUser");
       }
     }
@@ -55,6 +57,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        console.log("Auth state changed:", _event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -63,6 +66,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session check:", session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -77,12 +81,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Check if we have an admin user stored
     const adminUserStr = localStorage.getItem("adminUser");
     if (adminUserStr) {
+      console.log("Signing out admin user");
       localStorage.removeItem("adminUser");
       setUser(null);
+      window.location.href = "/login"; // Force redirect to login page
       return;
     }
     
     // Otherwise sign out from Supabase
+    console.log("Signing out regular user");
     await supabase.auth.signOut();
   };
 

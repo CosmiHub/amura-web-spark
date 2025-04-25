@@ -1,14 +1,23 @@
-
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLoginForm } from "@/components/AdminLoginForm";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 
 // Handles auto-redirect if a user is already an admin
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
 
   useEffect(() => {
+    // If user is already logged in as admin, redirect to dashboard
+    if (user && isAdmin()) {
+      console.log("User already logged in as admin, redirecting to dashboard");
+      navigate("/dashboard");
+      return;
+    }
+    
+    // Otherwise check if there's a Supabase session
     async function checkSession() {
       const { data } = await supabase.auth.getSession();
       const session = data?.session;
@@ -26,16 +35,7 @@ export default function LoginPage() {
       }
     }
     checkSession();
-  }, [navigate]);
-
-  useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        navigate("/login");
-      }
-    });
-    return () => { listener?.subscription?.unsubscribe(); };
-  }, [navigate]);
+  }, [navigate, user, isAdmin]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
