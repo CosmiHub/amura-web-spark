@@ -60,27 +60,27 @@ export function useAdminLogin() {
     if (!validateForm() || loading) return;
     setLoading(true);
 
-    // Clear any previous admin session
-    localStorage.removeItem("adminUser");
-
-    // Restrict login to allowed admins
-    const foundAdmin = ALLOWED_ADMINS.find(
-      (admin) => admin.email === credentials.email.trim() && admin.password === credentials.password
-    );
-
-    if (!foundAdmin) {
-      toast({
-        title: "Login Failed",
-        description: "Invalid credentials or not authorized.",
-        variant: "destructive"
-      });
-      setLoading(false);
-      return;
-    }
-
-    console.log("Admin found in allowed list:", foundAdmin.email);
-
     try {
+      // Clear any previous admin session
+      localStorage.removeItem("adminUser");
+
+      // Restrict login to allowed admins
+      const foundAdmin = ALLOWED_ADMINS.find(
+        (admin) => admin.email === credentials.email.trim() && admin.password === credentials.password
+      );
+
+      if (!foundAdmin) {
+        toast({
+          title: "Login Failed",
+          description: "Invalid credentials or not authorized.",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      console.log("Admin found in allowed list:", foundAdmin.email);
+
       // Store admin info in localStorage for session persistence
       const adminUser = {
         email: foundAdmin.email,
@@ -105,9 +105,8 @@ export function useAdminLogin() {
         description: "An unexpected error occurred. Please try again later.",
         variant: "destructive"
       });
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return {

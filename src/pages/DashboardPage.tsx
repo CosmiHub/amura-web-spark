@@ -1,8 +1,8 @@
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { BarChart3, Calendar, Award, Users, Settings, LogOut, LayoutDashboard } from "lucide-react";
+import { BarChart3, Calendar, Users, Settings, LogOut, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/use-toast";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { EventManagement } from "@/components/dashboard/EventManagement";
 import { ActivityLog } from "@/components/dashboard/ActivityLog";
+import { useState } from "react";
 
 export default function DashboardPage() {
   const { user, isAdmin, signOut } = useAuth();
@@ -18,7 +19,18 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // Strict check for admin access
-    if (!user || !isAdmin()) {
+    if (!user) {
+      console.log("Access denied to dashboard: no user found");
+      toast({
+        title: "Access Denied",
+        description: "You need to log in with administrator privileges to access this page.",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
+    }
+
+    if (!isAdmin()) {
       console.log("Access denied to dashboard: user not admin", { user });
       toast({
         title: "Access Denied",
@@ -26,7 +38,10 @@ export default function DashboardPage() {
         variant: "destructive",
       });
       navigate("/login");
+      return;
     }
+
+    console.log("Admin access granted to dashboard");
   }, [user, isAdmin, navigate]);
 
   // If not admin, show nothing during redirect

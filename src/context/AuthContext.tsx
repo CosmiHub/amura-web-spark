@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -42,10 +43,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (adminUserStr) {
       try {
         const adminUser = JSON.parse(adminUserStr) as AdminUser;
+        console.log("Admin user found in localStorage:", adminUser.email);
         setUser(adminUser);
         setSession(null); // No Supabase session for admin users
         setLoading(false);
-        console.log("Admin user found in localStorage:", adminUser.email);
         return;
       } catch (error) {
         // If parsing fails, continue with regular auth

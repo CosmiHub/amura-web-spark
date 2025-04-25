@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLoginForm } from "@/components/AdminLoginForm";
@@ -19,19 +20,23 @@ export default function LoginPage() {
     
     // Otherwise check if there's a Supabase session
     async function checkSession() {
-      const { data } = await supabase.auth.getSession();
-      const session = data?.session;
-      if (session?.user) {
-        // Check if user is admin
-        const { data: rolesData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .eq("role", "admin")
-          .maybeSingle();
-        if (rolesData?.role === "admin") {
-          navigate("/dashboard");
+      try {
+        const { data } = await supabase.auth.getSession();
+        const session = data?.session;
+        if (session?.user) {
+          // Check if user is admin
+          const { data: rolesData } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .eq("role", "admin")
+            .maybeSingle();
+          if (rolesData?.role === "admin") {
+            navigate("/dashboard");
+          }
         }
+      } catch (error) {
+        console.error("Error checking session:", error);
       }
     }
     checkSession();
