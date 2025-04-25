@@ -1,63 +1,62 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Download, Award } from "lucide-react";
-
-type Certificate = {
-  id: string;
-  eventName: string;
-  date: string;
-  studentName: string;
-  usn: string;
-  certificateUrl: string;
-};
-
-// Mock certificates data
-const mockCertificates: Certificate[] = [
-  {
-    id: "cert-001",
-    eventName: "Introduction to Cloud Computing",
-    date: "March 10, 2025",
-    studentName: "John Doe",
-    usn: "1AB21CS045",
-    certificateUrl: "#"
-  },
-  {
-    id: "cert-002",
-    eventName: "Data Science Bootcamp",
-    date: "February 18, 2025",
-    studentName: "Jane Smith",
-    usn: "1AB21CS045",
-    certificateUrl: "#"
-  },
-  {
-    id: "cert-003",
-    eventName: "Blockchain Technology Workshop",
-    date: "January 25, 2025",
-    studentName: "John Doe",
-    usn: "1AB21CS045",
-    certificateUrl: "#"
-  }
-];
+import { Search } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { CertificateCard } from "@/components/CertificateCard";
+import { Certificate } from "@/types/certificate";
+import { toast } from "@/components/ui/use-toast";
 
 export default function CertificatePage() {
   const [usn, setUsn] = useState("");
   const [searchPerformed, setSearchPerformed] = useState(false);
-  const [results, setResults] = useState<Certificate[]>([]);
-  
+
+  const { data: certificates, refetch } = useQuery({
+    queryKey: ['certificates', usn],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('certificates')
+        .select(`
+          id,
+          student_name,
+          usn,
+          certificate_url,
+          issued_at,
+          events (
+            title,
+            date
+          )
+        `)
+        .eq('usn', usn);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch certificates. Please try again.",
+          variant: "destructive"
+        });
+        return [];
+      }
+
+      return data?.map(cert => ({
+        id: cert.id,
+        eventName: cert.events.title,
+        date: new Date(cert.events.date).toLocaleDateString(),
+        studentName: cert.student_name,
+        usn: cert.usn,
+        certificateUrl: cert.certificate_url
+      })) || [];
+    },
+    enabled: false
+  });
+
   const handleSearch = () => {
     if (!usn) return;
-    
-    // In a real application, this would call an API to fetch certificates
-    const filteredCertificates = mockCertificates.filter(
-      cert => cert.usn.toLowerCase() === usn.toLowerCase()
-    );
-    
-    setResults(filteredCertificates);
     setSearchPerformed(true);
+    refetch();
   };
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -70,7 +69,9 @@ export default function CertificatePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-800 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">Certificate Download</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+            Certificate Download
+          </h1>
           <p className="mt-3 text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
             Enter your University Seat Number (USN) to download certificates for events and workshops you've attended.
           </p>
@@ -108,26 +109,10 @@ export default function CertificatePage() {
                       Search Results
                     </h3>
                     
-                    {results.length > 0 ? (
+                    {certificates && certificates.length > 0 ? (
                       <div className="space-y-4">
-                        {results.map((cert) => (
-                          <div key={cert.id} className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
-                            <div className="flex-1">
-                              <div className="flex items-center">
-                                <Award className="h-5 w-5 text-amura-purple mr-2" />
-                                <h4 className="font-semibold text-lg text-gray-900 dark:text-white">
-                                  {cert.eventName}
-                                </h4>
-                              </div>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{cert.date}</p>
-                              <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
-                                Awarded to: <span className="font-medium">{cert.studentName}</span>
-                              </p>
-                            </div>
-                            <Button className="btn-primary">
-                              <Download size={18} className="mr-2" /> Download Certificate
-                            </Button>
-                          </div>
+                        {certificates.map((cert) => (
+                          <CertificateCard key={cert.id} certificate={cert} />
                         ))}
                       </div>
                     ) : (
