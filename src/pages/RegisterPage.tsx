@@ -56,7 +56,7 @@ type Event = {
 export default function RegisterPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, session } = useAuth();
+  const { user, session, isAdmin } = useAuth();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -80,12 +80,19 @@ export default function RegisterPage() {
   const [eventsLoading, setEventsLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
 
+  // Check if the user is authenticated
+  const authenticated = !!user;
+  // Check if the user is an admin
+  const userIsAdmin = isAdmin();
+
   useEffect(() => {
+    console.log("User auth state:", { authenticated, userIsAdmin });
+    
     // Pre-fill email if user is logged in
     if (user?.email) {
       setFormData(prev => ({ ...prev, email: user.email || "" }));
     }
-  }, [user]);
+  }, [user, authenticated, userIsAdmin]);
 
   useEffect(() => {
     // Fetch events from Supabase
@@ -199,7 +206,8 @@ export default function RegisterPage() {
     if (formLoading) return;
     if (!validateForm()) return;
 
-    if (!user) {
+    // Check authentication
+    if (!authenticated) {
       toast({
         title: "Authentication Required",
         description: "Please log in before registering for events.",
@@ -212,14 +220,23 @@ export default function RegisterPage() {
     setFormLoading(true);
 
     try {
+      let userId = user.id;
+      
+      // If admin user, generate a random user ID
+      if (userIsAdmin) {
+        userId = crypto.randomUUID();
+      }
+
+      console.log("Submitting registration with user ID:", userId);
+
       // Insert registration in Supabase
       const { error } = await supabase.from("registrations").insert([
         {
           event_id: formData.eventId,
-          user_id: user.id,
+          user_id: userId,
           name: formData.name.trim(),
           email: formData.email.trim(),
-          usn: formData.usn.trim(),
+          usn: formData.usn.trim().toUpperCase(),
           department: formData.department,
           year: formData.year,
         },
@@ -238,7 +255,7 @@ export default function RegisterPage() {
       // Log this activity
       await supabase.from("activity_logs").insert([
         {
-          user_id: user.id,
+          user_id: userId,
           activity_type: "event_registration",
           description: `Registered for event`,
         },
@@ -264,9 +281,6 @@ export default function RegisterPage() {
       setFormLoading(false);
     }
   };
-
-  // Check if the user is authenticated
-  const isAuthenticated = !!user;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-800 py-12">

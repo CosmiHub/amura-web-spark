@@ -18,103 +18,124 @@ export default function CertificatePage() {
   const { data: certificates, refetch, isLoading, isError } = useQuery({
     queryKey: ['certificates', usn],
     queryFn: async () => {
-      // Check if any certificates exist for this USN
-      const { data: existingCerts, error: certsError } = await supabase
-        .from('certificates')
-        .select(`
-          id,
-          student_name,
-          usn,
-          certificate_url,
-          issued_at,
-          events (
-            title,
-            date
-          )
-        `)
-        .eq('usn', usn);
-
-      if (certsError) {
-        console.error("Error fetching certificates:", certsError);
-        throw new Error("Failed to fetch certificates");
-      }
-
-      // If certificates exist, return them
-      if (existingCerts && existingCerts.length > 0) {
-        return existingCerts.map(cert => ({
-          id: cert.id,
-          eventName: cert.events.title,
-          date: new Date(cert.events.date).toLocaleDateString(),
-          studentName: cert.student_name,
-          usn: cert.usn,
-          certificateUrl: cert.certificate_url
-        }));
-      }
-
-      // If no certificates exist, check if user has registrations and generate certificates
-      const { data: registrations, error: regError } = await supabase
-        .from('registrations')
-        .select(`
-          id,
-          name, 
-          usn,
-          event_id,
-          events (
-            id,
-            title,
-            date
-          )
-        `)
-        .eq('usn', usn);
-
-      if (regError) {
-        console.error("Error fetching registrations:", regError);
-        throw new Error("Failed to fetch registrations");
-      }
-
-      // If no registrations, return empty array
-      if (!registrations || registrations.length === 0) {
-        return [];
-      }
-
-      // For each registration, create a certificate if one doesn't exist
-      const newCertificates: Certificate[] = [];
-
-      for (const reg of registrations) {
-        // Generate a unique certificate URL
-        const certificateId = crypto.randomUUID();
-        const certificateUrl = `certificate-${certificateId}.pdf`;
-
-        // Insert the certificate
-        const { data: newCert, error: insertError } = await supabase
+      try {
+        console.log("Searching for certificates with USN:", usn);
+        
+        // Check if any certificates exist for this USN
+        const { data: existingCerts, error: certsError } = await supabase
           .from('certificates')
-          .insert({
-            student_name: reg.name,
-            usn: reg.usn,
-            event_id: reg.event_id,
-            certificate_url: certificateUrl,
-            issued_at: new Date().toISOString()
-          })
-          .select()
-          .single();
+          .select(`
+            id,
+            student_name,
+            usn,
+            certificate_url,
+            issued_at,
+            event_id,
+            events (
+              title,
+              date
+            )
+          `)
+          .eq('usn', usn);
 
-        if (insertError) {
-          console.error("Error creating certificate:", insertError);
-          continue;
+        if (certsError) {
+          console.error("Error fetching certificates:", certsError);
+          throw new Error("Failed to fetch certificates");
         }
 
-        // Add to our list of certificates to return
-        newCertificates.push({
-          id: newCert.id,
-          eventName: reg.events.title,
-          date: new Date(reg.events.date).toLocaleDateString(),
-          studentName: reg.name,
-          usn: reg.usn,
-          certificateUrl: certificateUrl
-        });
-      }
+        console.log("Existing certificates found:", existingCerts?.length || 0);
 
-      return newCertificates;
+        // If certificates exist, return them
+        if (existingCerts && existingCerts.length > 0) {
+          return existingCerts.map(cert => ({
+            id: cert.id,
+            eventName: cert.events?.title || "Unknown Event",
+            date: new Date(cert.events?.date || cert.issued_at).toLocaleDateString(),
+            studentName: cert.student_name,
+            usn: cert.usn,
+            certificateUrl: cert.certificate_url
+          }));
+        }
+
+        // If no certificates exist, check if user has registrations and generate certificates
+        const { data: registrations, error: regError } = await supabase
+          .from('registrations')
+          .select(`
+            id,
+            name, 
+            usn,
+            event_id,
+            events (
+              id,
+              title,
+              date,
+              status
+            )
+          `)
+          .eq('usn', usn);
+
+        if (regError) {
+          console.error("Error fetching registrations:", regError);
+          throw new Error("Failed to fetch registrations");
+        }
+
+        console.log("Registrations found:", registrations?.length || 0);
+
+        // If no registrations, return empty array
+        if (!registrations || registrations.length === 0) {
+          return [];
+        }
+
+        // For each registration for completed events, create a certificate if one doesn't exist
+        const newCertificates: Certificate[] = [];
+
+        for (const reg of registrations) {
+          // Only create certificates for completed events
+          if (reg.events?.status !== 'completed') {
+            console.log(`Skipping certificate creation for event ${reg.events?.title} as status is ${reg.events?.status}`);
+            continue;
+          }
+
+          // Generate a unique certificate ID
+          const certificateId = crypto.randomUUID();
+          const certificateUrl = `certificate-${certificateId}.pdf`;
+
+          console.log(`Creating certificate for ${reg.name} for event ${reg.events.title}`);
+
+          // Insert the certificate
+          const { data: newCert, error: insertError } = await supabase
+            .from('certificates')
+            .insert({
+              student_name: reg.name,
+              usn: reg.usn,
+              event_id: reg.event_id,
+              certificate_url: certificateUrl,
+              issued_at: new Date().toISOString()
+            })
+            .select('*, events(title, date)')
+            .single();
+
+          if (insertError) {
+            console.error("Error creating certificate:", insertError);
+            continue;
+          }
+
+          // Add to our list of certificates to return
+          newCertificates.push({
+            id: newCert.id,
+            eventName: newCert.events?.title || "Unknown Event",
+            date: new Date(newCert.events?.date || newCert.issued_at).toLocaleDateString(),
+            studentName: newCert.student_name,
+            usn: newCert.usn,
+            certificateUrl: newCert.certificate_url
+          });
+        }
+
+        return newCertificates;
+      } catch (error) {
+        console.error("Error in certificate query:", error);
+        throw error;
+      }
     },
     enabled: false,
     retry: 1
