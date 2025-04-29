@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Award, Download } from "lucide-react";
 import { generateCertificatePDF } from "@/utils/certificateUtils";
+import { toast } from "@/components/ui/use-toast";
 
 interface CertificateCardProps {
   certificate: Certificate;
@@ -11,8 +12,21 @@ interface CertificateCardProps {
 
 export const CertificateCard = ({ certificate }: CertificateCardProps) => {
   const handleDownload = () => {
-    const doc = generateCertificatePDF(certificate);
-    doc.save(`${certificate.eventName}-certificate.pdf`);
+    try {
+      const doc = generateCertificatePDF(certificate);
+      doc.save(`${certificate.eventName}-certificate.pdf`);
+      toast({
+        title: "Certificate Downloaded",
+        description: "Your certificate has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error("Error generating certificate:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate certificate. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (

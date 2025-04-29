@@ -5,5 +5,5 @@ export type Certificate = {
   date: string;
   studentName: string;
   usn: string;
-  certificateUrl: string;
+  certificateUrl: string | null;
 };

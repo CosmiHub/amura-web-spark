@@ -53,5 +53,9 @@ export const generateCertificatePDF = (certificate: Certificate) => {
   doc.setFontSize(12);
   doc.text(`USN: ${certificate.usn}`, 148.5, 150, { align: "center" });
 
+  // Add certificate ID for verification
+  doc.setFontSize(10);
+  doc.text(`Certificate ID: ${certificate.id}`, 148.5, 190, { align: "center" });
+
   return doc;
 };
