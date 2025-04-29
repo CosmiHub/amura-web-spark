@@ -295,7 +295,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="max-w-md mx-auto">
-          {!isAuthenticated && (
+          {!authenticated && (
             <Alert className="mb-6">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Authentication Required</AlertTitle>
@@ -324,7 +324,7 @@ export default function RegisterPage() {
                     value={formData.name}
                     onChange={handleChange}
                     className={errors.name ? "border-red-500" : ""}
-                    disabled={!isAuthenticated}
+                    disabled={!authenticated}
                   />
                   {errors.name && (
                     <p className="text-red-500 text-sm">{errors.name}</p>
@@ -341,7 +341,7 @@ export default function RegisterPage() {
                     value={formData.usn}
                     onChange={handleChange}
                     className={errors.usn ? "border-red-500" : ""}
-                    disabled={!isAuthenticated}
+                    disabled={!authenticated}
                   />
                   {errors.usn && (
                     <p className="text-red-500 text-sm">{errors.usn}</p>
@@ -360,7 +360,7 @@ export default function RegisterPage() {
                     onChange={handleChange}
                     className={errors.email ? "border-red-500" : ""}
                     readOnly={!!user?.email}
-                    disabled={!isAuthenticated}
+                    disabled={!authenticated}
                   />
                   {errors.email && (
                     <p className="text-red-500 text-sm">{errors.email}</p>
@@ -375,7 +375,7 @@ export default function RegisterPage() {
                     onValueChange={(value) =>
                       handleSelectChange("department", value)
                     }
-                    disabled={!isAuthenticated}
+                    disabled={!authenticated}
                   >
                     <SelectTrigger
                       className={errors.department ? "border-red-500" : ""}
@@ -405,7 +405,7 @@ export default function RegisterPage() {
                     onValueChange={(value) =>
                       handleSelectChange("year", value)
                     }
-                    disabled={!isAuthenticated}
+                    disabled={!authenticated}
                   >
                     <SelectTrigger
                       className={errors.year ? "border-red-500" : ""}
@@ -430,7 +430,7 @@ export default function RegisterPage() {
                   <Label htmlFor="event">Select Event/Workshop</Label>
                   <Select
                     value={formData.eventId}
-                    disabled={eventsLoading || !isAuthenticated}
+                    disabled={eventsLoading || !authenticated}
                     onValueChange={(value) =>
                       handleSelectChange("eventId", value)
                     }
@@ -468,7 +468,7 @@ export default function RegisterPage() {
             <CardFooter>
               <Button
                 className="w-full btn-primary"
-                disabled={formLoading || !isAuthenticated}
+                disabled={formLoading || !authenticated}
                 onClick={handleSubmit}
               >
                 {formLoading ? "Registering..." : "Register Now"}
