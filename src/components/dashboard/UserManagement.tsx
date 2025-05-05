@@ -1,9 +1,12 @@
 
 import { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { departments, years } from "../register/constants";
+import { Award, Check, Download } from "lucide-react";
+import { generateCertificatePDF } from "@/utils/certificateUtils";
 
 type Registration = {
   id: string;
@@ -17,6 +20,7 @@ type Registration = {
   event?: {
     title: string;
   } | null;
+  verified?: boolean;
 };
 
 export const UserManagement = () => {
@@ -26,7 +30,7 @@ export const UserManagement = () => {
   const fetchRegistrations = async () => {
     setIsLoading(true);
     try {
-      // Fetch registrations with event details
+      // Fetch registrations with event details and certificates info
       const { data, error } = await supabase
         .from("registrations")
         .select(`
@@ -40,7 +44,29 @@ export const UserManagement = () => {
       if (error) throw error;
       
       console.log("Registrations fetched:", data);
-      setRegistrations(data || []);
+
+      // Check if each registration has a certificate
+      if (data) {
+        const registrationsWithVerification = await Promise.all(
+          data.map(async (registration) => {
+            const { data: certificates } = await supabase
+              .from("certificates")
+              .select("*")
+              .eq("usn", registration.usn)
+              .eq("event_id", registration.event_id)
+              .single();
+            
+            return { 
+              ...registration, 
+              verified: !!certificates 
+            };
+          })
+        );
+        
+        setRegistrations(registrationsWithVerification);
+      } else {
+        setRegistrations([]);
+      }
     } catch (error: any) {
       console.error("Error fetching registrations:", error);
       toast({
@@ -73,6 +99,81 @@ export const UserManagement = () => {
     });
   };
 
+  const handleVerifyUser = async (registration: Registration) => {
+    try {
+      // Generate a unique certificate ID
+      const certificateId = crypto.randomUUID();
+      const certificateUrl = `certificate-${certificateId}.pdf`;
+
+      // Insert the certificate into the database
+      const { data, error } = await supabase
+        .from("certificates")
+        .insert({
+          student_name: registration.name,
+          usn: registration.usn,
+          event_id: registration.event_id,
+          certificate_url: certificateUrl,
+          issued_at: new Date().toISOString()
+        })
+        .select();
+
+      if (error) throw error;
+
+      toast({
+        title: "User Verified",
+        description: `Certificate has been issued to ${registration.name}`,
+      });
+
+      // Refresh the data
+      fetchRegistrations();
+    } catch (error: any) {
+      console.error("Error verifying user:", error);
+      toast({
+        title: "Verification Failed",
+        description: "Could not verify user. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadCertificate = async (registration: Registration) => {
+    try {
+      // Get event details for certificate
+      const { data: eventData, error: eventError } = await supabase
+        .from("events")
+        .select("title, date")
+        .eq("id", registration.event_id)
+        .single();
+
+      if (eventError) throw eventError;
+
+      // Generate and download certificate
+      const certificate = {
+        id: crypto.randomUUID(),
+        eventName: eventData?.title || "Event",
+        date: new Date(eventData?.date || new Date()).toLocaleDateString(),
+        studentName: registration.name,
+        usn: registration.usn,
+        certificateUrl: null
+      };
+
+      const doc = generateCertificatePDF(certificate);
+      doc.save(`${registration.name}-${eventData?.title}-certificate.pdf`);
+
+      toast({
+        title: "Certificate Downloaded",
+        description: "The certificate has been downloaded successfully."
+      });
+    } catch (error: any) {
+      console.error("Error downloading certificate:", error);
+      toast({
+        title: "Download Failed",
+        description: "Could not download certificate. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -92,16 +193,18 @@ export const UserManagement = () => {
                   <TableHead>Year</TableHead>
                   <TableHead>Event</TableHead>
                   <TableHead>Registration Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">Loading registrations...</TableCell>
+                    <TableCell colSpan={9} className="text-center py-8">Loading registrations...</TableCell>
                   </TableRow>
                 ) : registrations.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">No registrations found.</TableCell>
+                    <TableCell colSpan={9} className="text-center py-8">No registrations found.</TableCell>
                   </TableRow>
                 ) : (
                   registrations.map((registration) => (
@@ -113,6 +216,38 @@ export const UserManagement = () => {
                       <TableCell>{getYearName(registration.year)}</TableCell>
                       <TableCell>{registration.event?.title || "Unknown Event"}</TableCell>
                       <TableCell>{formatDate(registration.created_at)}</TableCell>
+                      <TableCell>
+                        {registration.verified ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <Check className="w-3 h-3 mr-1" /> Verified
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            Pending
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        {!registration.verified ? (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleVerifyUser(registration)}
+                            className="text-green-600 border-green-600"
+                          >
+                            <Check className="w-4 h-4 mr-1" /> Verify
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadCertificate(registration)}
+                            className="text-amura-purple"
+                          >
+                            <Download className="w-4 h-4 mr-1" /> Certificate
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
