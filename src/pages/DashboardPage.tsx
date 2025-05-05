@@ -59,6 +59,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="flex">
+        {/* Left sidebar - visible on medium and larger screens */}
         <div className="w-64 h-screen sticky top-0 bg-white dark:bg-gray-800 shadow-md hidden md:block">
           <div className="p-6">
             <h2 className="text-xl font-bold text-amura-purple">AMURA Admin</h2>
@@ -127,6 +128,7 @@ export default function DashboardPage() {
           </div>
         </div>
         
+        {/* Main content area */}
         <div className="flex-1 p-8">
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
@@ -135,6 +137,7 @@ export default function DashboardPage() {
             </p>
           </div>
           
+          {/* Mobile tabs - visible on small screens only */}
           <div className="md:hidden mb-6">
             <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full">
@@ -154,6 +157,7 @@ export default function DashboardPage() {
             </Tabs>
           </div>
           
+          {/* Tab content */}
           <div className="space-y-8">
             {activeTab === "overview" && (
               <>
@@ -209,5 +213,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+    </div>
   );
 }
