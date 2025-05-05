@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { departments, years } from "../register/constants";
-import { Award, Check, Download } from "lucide-react";
+import { Award, Check, Download, RefreshCw } from "lucide-react";
 import { generateCertificatePDF } from "@/utils/certificateUtils";
 
 type Registration = {
@@ -26,11 +26,12 @@ type Registration = {
 export const UserManagement = () => {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchRegistrations = async () => {
     setIsLoading(true);
     try {
-      // Fetch registrations with event details and certificates info
+      // Fetch registrations with event details
       const { data, error } = await supabase
         .from("registrations")
         .select(`
@@ -46,7 +47,7 @@ export const UserManagement = () => {
       console.log("Registrations fetched:", data);
 
       // Check if each registration has a certificate
-      if (data) {
+      if (data && data.length > 0) {
         const registrationsWithVerification = await Promise.all(
           data.map(async (registration) => {
             const { data: certificates } = await supabase
@@ -66,6 +67,7 @@ export const UserManagement = () => {
         setRegistrations(registrationsWithVerification);
       } else {
         setRegistrations([]);
+        console.log("No registrations found in database");
       }
     } catch (error: any) {
       console.error("Error fetching registrations:", error);
@@ -76,6 +78,7 @@ export const UserManagement = () => {
       });
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -174,10 +177,25 @@ export const UserManagement = () => {
     }
   };
 
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchRegistrations();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold text-gray-900 dark:text-white">Registered Users</h3>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh Data
+        </Button>
       </div>
       
       <div className="overflow-x-auto">
@@ -204,7 +222,7 @@ export const UserManagement = () => {
                   </TableRow>
                 ) : registrations.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">No registrations found.</TableCell>
+                    <TableCell colSpan={9} className="text-center py-8">No registrations found. Users need to register for events first.</TableCell>
                   </TableRow>
                 ) : (
                   registrations.map((registration) => (
