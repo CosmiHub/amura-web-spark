@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { EventModal } from "./EventModal";
+import { EditEventModal } from "./EditEventModal";
 import { toast } from "@/components/ui/use-toast";
 
 type Event = {
@@ -24,6 +25,8 @@ export const EventManagement = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   const fetchEvents = async () => {
     setIsLoading(true);
@@ -70,13 +73,9 @@ export const EventManagement = () => {
     fetchEvents();
   }, []);
 
-  const handleEditEvent = (eventId: string) => {
-    console.log("Edit event:", eventId);
-    // Implement edit functionality in the future
-    toast({
-      title: "Edit Event",
-      description: "Edit functionality will be implemented in a future update.",
-    });
+  const handleEditEvent = (event: Event) => {
+    setSelectedEvent(event);
+    setIsEditModalOpen(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -150,7 +149,7 @@ export const EventManagement = () => {
                           variant="ghost" 
                           size="sm" 
                           className="text-amura-purple"
-                          onClick={() => handleEditEvent(event.id)}
+                          onClick={() => handleEditEvent(event)}
                         >
                           <Edit size={16} className="mr-1" /> Edit
                         </Button>
@@ -169,6 +168,15 @@ export const EventManagement = () => {
         onClose={() => setIsModalOpen(false)} 
         onEventAdded={fetchEvents} 
       />
+
+      {selectedEvent && (
+        <EditEventModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onEventUpdated={fetchEvents}
+          event={selectedEvent}
+        />
+      )}
     </div>
   );
 };

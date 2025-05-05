@@ -38,6 +38,8 @@ export const UserManagement = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+      
+      console.log("Registrations fetched:", data);
       setRegistrations(data || []);
     } catch (error: any) {
       console.error("Error fetching registrations:", error);

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -44,7 +43,7 @@ type Event = {
 };
 
 interface RegisterFormProps {
-  user: User | null;
+  user: any; // Change from User to any to fix type error
   authenticated: boolean;
   userIsAdmin: boolean;
   events: Event[];
