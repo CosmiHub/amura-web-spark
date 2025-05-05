@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/use-toast";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { EventManagement } from "@/components/dashboard/EventManagement";
 import { ActivityLog } from "@/components/dashboard/ActivityLog";
+import { UserManagement } from "@/components/dashboard/UserManagement";
 import { useState } from "react";
 
 export default function DashboardPage() {
@@ -179,7 +180,9 @@ export default function DashboardPage() {
             
             {activeTab === "events" && <EventManagement />}
             
-            {activeTab === "users" && (
+            {activeTab === "users" && <UserManagement />}
+            
+            {activeTab === "settings" && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
                   <h2 className="text-xl font-semibold mb-4">Welcome, {('username' in user) ? user.username : 'Administrator'}</h2>
@@ -206,6 +209,5 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </div>
   );
 }
